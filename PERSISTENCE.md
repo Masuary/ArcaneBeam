@@ -476,7 +476,8 @@ Last verified build:
 
 - Version: `0.1.4`
 - Built jar: `build/libs/ArcaneBeam-1.18.2-0.1.4.jar`
-- SHA256: `5CF0213E14985ED7455A9BC75B03F5F0C4B15BAF6523DC00FAFD5A02CE532221`
+- Instance jar: `C:\Users\Ethan\AppData\Roaming\PrismLauncher\instances\vaultcrafters-bootstrap-1.0.0\.minecraft\mods\ArcaneBeam-1.18.2-0.1.4.jar`
+- SHA256 for both jars: `76A6B0C215A2EC49371211C4ADC7C9140672D32D3D38E35704BCC38A5B0AA3CC`
 
 User-confirmed before closing:
 
@@ -491,6 +492,26 @@ Direction hardening applied after the initial `0.1.3` build:
 - `ArcaneBeamRenderer` rotates the tube from that direction instead of deriving direction from `end - start`
 - `ArcaneBeamManager.directionalRenderEnd(...)` projects the collision/crosshair endpoint onto the look vector, so collision can shorten the beam but cannot pull its visual axis north or any other cardinal direction
 - `ArcaneBeamManager` caches the last valid look vector per caster so a transient bad look vector does not fall back to a fixed world direction
+
+Sophisticated Storage / Compressium compatibility added in the same deployed `0.1.4` artifact:
+
+- `SophisticatedStorageDisplayItemRendererMixin` targets `net.p3pp3rf1y.sophisticatedstorage.client.render.DisplayItemRenderer`
+- `SophisticatedStorageBarrelBakedModelBaseMixin` targets `net.p3pp3rf1y.sophisticatedstorage.client.render.BarrelBakedModelBase`
+- `CompressiumDisplayCompat` centralizes Compressium namespace detection, tier texture lookup, and fixed-display offset/scale constants shared by both mixins
+- `CompressiumDisplayCompat` must stay outside `dev.hoyin1600p.arcanebeam.mixin`; putting normal helper classes inside the configured mixin package causes Mixin `IllegalClassLoadError` when those helpers are referenced directly
+- it only changes `compressium` namespace block items
+- it cancels Sophisticated Storage's private `renderSingleItem(...)` for Compressium block items and manually draws the exposed display face as two textured quads
+- it also intercepts the baked barrel model display-item path used by limited barrels and injects a merged Compressium face before Sophisticated's normal display-item transformations move it onto the barrel face
+- Compressium display fallback applies a `0.5` fixed-display scale because Compressium's Forge multi-layer parent does not reliably expose the normal vanilla block item fixed transform
+- the base quad uses the Compressium item model's particle sprite, which is the original block texture
+- the dynamic renderer overlay uses `compressium:block/layer_1` through `compressium:block/layer_9`, parsed from the item registry name's final tier suffix
+- in the baked limited-barrel model path, the Compressium layer PNG alpha is merged into subdivided base-sprite quads as per-pixel darkening; this preserves the intended translucent-black visual effect without a second surface that can z-fight
+- Compressium barrel display faces are pushed outward by `1/64` block to align their depth with normal non-Compressium block display items
+- this bypasses both the normal item renderer path and the block renderer path, because Compressium's Forge multi-layer model can fail to emit visible display geometry in Sophisticated barrel display rendering
+- it logs each Compressium item variant once when the fallback handles it, so future runtime debugging can tell whether the Sophisticated Storage hook is being reached
+- it still returns a stable full-cube display offset for Compressium block items when Sophisticated Storage asks for one
+- `ArcaneBeamMixinPlugin` uses Mixin's bytecode provider to detect the Sophisticated Storage target class and logs whether the optional mixin is applied or skipped
+- `build.gradle` uses local `compileOnly` Sophisticated Core/Storage jars from the Prism instance; these are compile-time validation inputs only and are not bundled
 
 Do not restart the crouch smoothing investigation unless the user asks. If revisiting it, start from:
 
