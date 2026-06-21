@@ -7,7 +7,7 @@ This file is for future maintenance work. It is meant to give enough context to 
 - Repo: `https://github.com/HoYin1600p/ArcaneBeam`
 - Mod name: `Arcane Beam`
 - Current version:
-  - `0.1.7`
+  - `0.1.10`
 - Target:
   - Minecraft `1.18.2`
   - Forge `40.x`
@@ -419,12 +419,32 @@ Current important design choices:
 - no old “color select” buttons
 - preview square itself is the selector
 - beam and glow rows are separate
-- `Beam` and `Glow` labels sit to the left of their rows
+- all tabs use the same fixed-width Colors card
+- Arcane/Rail color rows use the same label-above-slot format as dense tabs: `Core 1-4` and `Glow 1-4`
 - slots are spaced by computed width, not fixed cramped spacing
+- the config screen uses localized top-bar and bottom-drawer chrome, not `renderBackground()`
+- the bottom drawer has `EXPANDED`, `COLLAPSED`, and `HIDDEN` states
+- top tabs are descriptor-driven and support overflow arrows/mouse-wheel scrolling
+- the color picker is a popover opened from swatches/hex fields, not an always-visible drawer block
+- the color picker popover contains its own selected-slot hex input; it is hidden/unfocused whenever the picker closes
+- the color picker inset frame must stay inside the popover panel; do not widen it past the palette + brightness strip bounds
+- buttons, sliders, and edit boxes use Arcane Starforge themed rendering wrappers
+- the expanded drawer is `264` virtual pixels tall after the compact drawer polish pass
+- dense tabs use compact `23` pixel row spacing so lower numeric inputs stay within the card bottom
+- edit boxes keep Minecraft's native bordered text layout inside the themed 9-slice frame because Forge 1.18.2 vertically centers text only in bordered mode
+- the config screen temporarily suppresses vanilla/Forge/Vault HUD overlays for its full lifetime
+- `Clean View` / `H` hides the ArcaneBeam chrome for an unobstructed preview
+- `Clean View` leaves a small bottom-center `Restore Menu (H)` 9-slice handle that can be clicked to reopen the menu without closing the screen
+- HUD suppression temporarily sets `Minecraft.options.hideGui = true`, cancels `RenderGameOverlayEvent.Pre` for `ElementType.ALL`, and restores the previous `hideGui` state when closing the screen
+- slider labels render above the track/handle with compact labels on narrow controls to avoid handle/text collisions
+- dense color tabs render each slot label above its swatch+hex group and avoid extra in-card row titles so labels do not drift under input boxes
+- control cards use titled sub-card backgrounds for their current groups
+- `isPauseScreen()` returns `false` so the preview can stay live behind the menu
 - `CURSEFORGE_RELEASES.md` is the public release-copy file
 - `VERSION_PERSISTENCE.md` is internal version memory, not release-page copy
 
 Do not reintroduce the old selector button layout.
+Do not reintroduce a full-screen dim background over the live preview.
 
 ## README / Credits State
 
@@ -484,7 +504,37 @@ If you return later, do **not** start by re-debugging these unless symptoms spec
 The basic systems already work. The custom sound path intentionally bypasses the standard event route.
 - the current 8-sided tube renderer also works and should be treated as the baseline shape unless the user explicitly wants another geometry
 
-## Current Working State After 0.1.7
+## Current Working State After 0.1.10
+
+Last verified build:
+
+- Version: `0.1.10`
+- Built jar: `build/libs/ArcaneBeam-1.18.2-0.1.10.jar`
+- Built jar SHA256: `1147AF17FAFF4DD51BFE62960256B08A261C77989EA3598B8DC0318BC45890C8`
+- Build command: `bash ./gradlew build`
+- Build result: success, with existing optional mixin target warnings
+
+Menu overhaul current behavior:
+
+- bottom drawer layout, top tab bar, 9-slice GUI atlas, themed buttons, themed sliders, and themed input frames are implemented
+- `Collapse` keeps a short drawer handle visible
+- `Clean View` hides ArcaneBeam chrome but leaves the clickable `Restore Menu (H)` handle visible
+- `H` toggles Clean View when text input is not focused
+- vanilla, Forge, and Vault HUD overlays are suppressed while the config screen is open
+- expanded drawer height is `264` virtual pixels to preserve more live-preview space
+- all tabs use the same `414` virtual-pixel Colors card width
+- dense color labels are anchored above each color swatch/hex group for Lightning Strike, Vault Altar, Storm Arrow, Smite, and Archon
+- Arcane/Rail color labels are anchored above each swatch/hex group as `Core 1-4` and `Glow 1-4`
+- color picker popover includes an exact hex input for the selected slot
+- control cards render titled lightweight sub-card backgrounds for existing groups
+- overflowing control-card content scrolls horizontally with the mouse wheel over the control-card viewport, snapping to actual card boundaries
+- partially visible control-card chrome still renders at scroll edges, while buttons, inputs, sliders, title chips, and manual labels are hidden when they would clip outside the viewport
+- Arcane/Rail control widgets are split into titled horizontal Phase 6 cards: Shape, Motion, Advanced, Audio, Transition, and Origin
+- Lightning Strike, Vault Altar, Storm Arrow, Smite, and Archon controls are split into titled horizontal Phase 6 cards
+- dense-tab color swatches remain in the dedicated Colors card with existing labels and picker behavior
+- Segment Gap is visible again inside Storm Arrow/Smite Strike cards
+
+## Historical Working State After 0.1.7
 
 Last verified build:
 
@@ -547,7 +597,7 @@ Sophisticated Storage / Compressium compatibility added in the same deployed `0.
 - it logs each Compressium item variant once when the fallback handles it, so future runtime debugging can tell whether the Sophisticated Storage hook is being reached
 - it still returns a stable full-cube display offset for Compressium block items when Sophisticated Storage asks for one
 - `ArcaneBeamMixinPlugin` uses Mixin's bytecode provider to detect the Sophisticated Storage target class and logs whether the optional mixin is applied or skipped
-- `build.gradle` uses local `compileOnly` Sophisticated Core/Storage jars from the Prism instance; these are compile-time validation inputs only and are not bundled
+- `build.gradle` uses CurseMaven `compileOnly fg.deobf(...)` coordinates for Sophisticated Core/Storage; these are compile-time validation inputs only and are not bundled
 
 Config profiles added in `0.1.6`:
 
